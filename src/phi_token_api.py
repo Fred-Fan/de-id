@@ -21,8 +21,8 @@ import requests
 import json
 import argparse
 
+# load function
 stemmer = PorterStemmer()
-
 #apikey = input("input your api >")
 #searchterms = search_terms(apikey)
 searchterms1 = search_terms("81602583-1f6f-400a-a49f-618975025bec")
@@ -32,7 +32,7 @@ st = StanfordNERTagger('F:\\Google Drive\\\Jupyter\\ICHS\\english.all.3class.dis
 autoc = autocorrect()
 stemmer = PorterStemmer()
 
-
+# file path
 #finpath = "/media/DataHD/beau/baby_notes/"
 #finpath = "/media/DataHD/corpus/notes/"
 #foutpath ="/media/DataHD/r_phi_corpus/"
@@ -42,7 +42,6 @@ foutpaht = "output\\"
 #with open("whitelist.txt",'rb') as fin:
 #    whitelist = fin.read()
 #whitelist = set(whitelist)
-
 with open("whitelist.pkl", "rb") as fp:
     whitelist = pickle.load(fp, encoding="bytes")
 print('length of whitelist: {}'.format(len(whitelist)))
@@ -75,8 +74,6 @@ pattern_time = re.compile(r"""\b(
 
 for f in glob.glob(finpath+"*.txt"):
     with open(f) as fin:
-        #print f
-        #f_name = f.split("\\")[5]
         f_name = f
         #print f_name
         total_records += 1
@@ -87,25 +84,30 @@ for f in glob.glob(finpath+"*.txt"):
         out_name = 'whiteListed_'+ f_name
         phi_reduced = ''
         searchterms2.search("")
-        #sent_end_prev = ' '
+
+        # get note_id, date
         note = fin.read()
         # remove note id,e.g. "A30000091        2006-10-15 22:28:00.000 6789784"     
         note_id = re.search(r'\s\d+\s', note).group(0)
         phi_note_id = note [:note.index(note_id)+len(note_id)]
         note = note.replace(phi_note_id, 'FILTERED ')
-        # remove "-"
+        
+        # remove "-", "/" and tokenize
         note = sent_tokenize(note.replace('-', ' ').replace('/',' '))
         word_sent = [word_tokenize(sent) for sent in note]
+        
         for sent in word_sent:
             tmp = ' '.join(sent)
             sent_tag = nltk.pos_tag_sents([sent])
             for word in sent_tag[0]:
                 word_output = word[0]
+                
+                # bypass the punctuations
                 if word[0] not in string.punctuation:
                     word_position = sent.index(word[0])
                     
                     #print(word)
-                # keep the number format, others will remove the special chars
+                # keep the number's format, others will remove the special chars
                     if word[1] != 'CD':
                         word_output = str(pattern.sub('',word[0])) #actually remove the speical chars
                     
@@ -117,7 +119,7 @@ for f in glob.glob(finpath+"*.txt"):
                         ((word[1] == 'NNS' or word[1] == 'NNPS') and word_output.istitle())):
                     #or ((word[1] == 'CD' or (word[1] == 'JJ') and pattern_time.findall(word)))
                        
-                            # autocorrection
+                            #autocorrection
                             #print("1")
                             word_ori = word_output
                             word_output, correct_flag = autoc.autocorrection(word_ori)
@@ -128,17 +130,14 @@ for f in glob.glob(finpath+"*.txt"):
                                 safe = False
                         
                             elif word_output.lower().encode("utf8") not in whitelist and stemmer.stem(word_output.lower()).encode('utf8') not in whitelist:
-                                #print("2")
-                                #print(st.tag([word_output])[0])
-                                #name
-                                #UMLS-API
+                                #UMLS-API , check acronyms but do not check names
                                 if ((st.tag([word_output])[0][1] != 'PERSON' and st.tag([word_output])[0][1] != 'LOCATION') or 
                                 ((st.tag([word_output])[0][1] == 'PERSON' or st.tag([word_output])[0][1] != 'LOCATION') and not word_output.istitle())):
                                     #print(word_output)
                                     searchterms1.search(word_output.lower())
                                  #   print("5")
                                     if not searchterms1.ifumls():
-                                    #      print(word_output)
+                                    # ensure the stem is ok 
                                         searchterms2.search(stemmer.stem(word_output.lower()))
                                    #     print("6")
                                         # searchterms2.printresult()
@@ -157,7 +156,7 @@ for f in glob.glob(finpath+"*.txt"):
                                     safe = False
                                     screens_per_file[f_name] += 1
                                     
-                                    
+                        # number and lenght > 7
                         elif ((word[1] == 'CD' and pattern_sens.findall(tmp)) or (word[1] == 'CD' and len(word_output) > 7)):
                             #print("4")
                              #print(word_output)
