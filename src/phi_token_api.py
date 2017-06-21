@@ -116,9 +116,6 @@ for f in glob.glob(finpath+"*.txt"):
                         if ((word[1] == 'NN' or word[1] == 'NNP') or
                         ((word[1] == 'NNS' or word[1] == 'NNPS') and word_output.istitle())):
                     #or ((word[1] == 'CD' or (word[1] == 'JJ') and pattern_time.findall(word)))
-                            
-                            # name
-                           
                        
                             # autocorrection
                             #print("1")
@@ -134,6 +131,7 @@ for f in glob.glob(finpath+"*.txt"):
                                 #print("2")
                                 #print(st.tag([word_output])[0])
                                 #name
+                                #UMLS-API
                                 if ((st.tag([word_output])[0][1] != 'PERSON' and st.tag([word_output])[0][1] != 'LOCATION') or 
                                 ((st.tag([word_output])[0][1] == 'PERSON' or st.tag([word_output])[0][1] != 'LOCATION') and not word_output.istitle())):
                                     #print(word_output)
