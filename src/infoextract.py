@@ -20,7 +20,7 @@ import csv
 #finpath = "/media/DataHD/beau/baby_notes/"
 #finpath = "/media/DataHD/corpus/notes/"
 #foutpath ="/media/DataHD/r_phi_corpus/"
-finpath = "input_test\\"
+finpath = "input_test\\Ext\\"
 foutpath = "output_test\\"
 
 pattern=re.compile("[^\w+]") #we're going to want to remove all special characters
@@ -39,12 +39,12 @@ pattern_date = re.compile(r"""\b(
 )""",re.X|re.I)   
 
 
-with open('data\\ext.pkl', 'rb') as fin:
-    filter_set = pickle.load(fin)
-
-columnnames = ','.join(filter_set)
-columnlist = list(filter_set)
-reg = '|'.join(filter_set)
+#with open('data\\ext.pkl', 'rb') as fin:
+#    filter_set = pickle.load(fin)
+columnlist = ['temp', 'resp', 'rate', 'pulse', 'pressure']
+columnnames = ','.join(columnlist)
+#columnlist = list(filter_set)
+reg = '|'.join(columnlist)
 reg = '\\b('+reg+')'
 pattern_ext = re.compile(reg, re.X|re.I)
 total_records = 0
@@ -53,19 +53,20 @@ print(columnlist)
 
 for f in glob.glob(finpath+"*.txt"):
         
-    with open(f) as fin:
-        f_name = f
+    with open(f, encoding='utf-8', errors='ignore') as fin:
+        head, tail = os.path.split(f)
+        note_id = re.findall(r'\d+', tail)[0]  # get the file number
         total_records += 1
         ext_dict = defaultdict(lambda: 'Unknown')
         #ext_dict = {}
         #take the note name for writing
-        out_name = 'ext_'+ f_name
+        out_name = 'ext_'+ note_id
         note = fin.read()
-        note_id = re.search(r'\b(\d{5}\d+)', note).group(0)
-        date = pattern_date.search(note).group(0)
+        #note_id = re.search(r'\b(\d{5}\d+)', note).group(0)
+        #date = pattern_date.search(note).group(0)
         note = sent_tokenize(note.replace('-', ' '))
         word_sent = [word_tokenize(sent) for sent in note]
-        ext_dict['date'] = date 
+        #ext_dict['date'] = date 
         ext_dict['note_id'] = note_id
         for sent in word_sent:
             tmp = ' '.join(sent)
@@ -80,10 +81,10 @@ for f in glob.glob(finpath+"*.txt"):
                     try:
                         if  word[1]  == 'CD':
                             #print(word)
-                            if word_position <= 1:
+                            if word_position <= 2:
                                 word_previous = ' '.join(sent[0:word_position])
                             else:
-                                word_previous = ' '.join(sent[word_position-2:word_position])
+                                word_previous = ' '.join(sent[word_position-3:word_position])
                                 
                             if word_position == len(sent):
                                 word_after = ''
@@ -98,18 +99,18 @@ for f in glob.glob(finpath+"*.txt"):
                                 data_type = pattern_ext.search(word_previous).group(0).lower()
                                 #print(data_type)
                                 if data_type in ext_dict.keys():
-                                    ext_dict[data_type] += ','
+                                    ext_dict[data_type] += '/'+str(word[0])
                                 else:
-                                    ext_dict[data_type] = word[0]
+                                    ext_dict[data_type] = str(word[0])
                             else:
                                 #print(word_after)
                                 if pattern_ext.search(word_after):
                                     data_type = pattern_ext.search(word_after).group(0).lower()
                                     #print(data_type)
                                     if data_type in ext_dict.keys():
-                                        ext_dict[data_type] += ','
+                                        ext_dict[data_type] += '/'+str(word[0])
                                     else:
-                                        ext_dict[data_type] = word[0]
+                                        ext_dict[data_type] = str(word[0])
                                 #print(ext_dict)
                         elif word[0].lower() == 'alcohol':
                             min_dist = 0
@@ -133,7 +134,7 @@ for f in glob.glob(finpath+"*.txt"):
                         #print(nltk.pos_tag(word))
                         pass
         ext_dict_all[note_id] = ext_dict
-        print(ext_dict)
+        #print(ext_dict)
 
 print(ext_dict_all)
 fout = "output_test\\info_ext.pkl"
@@ -141,8 +142,9 @@ fout = "output_test\\info_ext.pkl"
  #   pickle.dump(ext_dict_all, fout)
 
  
-with open('names.csv', 'w', newline="\n", encoding="utf-8") as csvfile:
-    fieldnames = ['note_id', 'date', 'alcohol'] + columnlist
+with open('infoext_reduced.csv', 'w', newline="\n", encoding="utf-8") as csvfile:
+    #fieldnames = ['note_id', 'date', 'alcohol'] + columnlist
+    fieldnames = ['note_id', 'alcohol'] + columnlist
    # writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     f_csv = csv.DictWriter(csvfile, fieldnames)
     f_csv.writeheader()
@@ -150,5 +152,6 @@ with open('names.csv', 'w', newline="\n", encoding="utf-8") as csvfile:
     for k,v in ext_dict_all.items():
         for i in fieldnames:
             v[i]
+            #print(v[i])
         f_csv.writerow(v)
 

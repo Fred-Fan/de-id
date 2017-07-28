@@ -3,7 +3,7 @@
 
 # In[130]:
 
-from nltk.corpus import wordnet as wn
+#from nltk.corpus import wordnet as wn
 import re
 from collections import Counter
 import pickle
@@ -13,9 +13,9 @@ import pickle
 with open('whitedict.txt', 'r') as fin:
     WORDS = set(fin.read().split(','))
 '''
-with open("whitelist.pkl", "rb") as fp:
+#with open("whitelist.pkl", "rb") as fp:
     #whitelist = pickle.load(fp, encoding="bytes")
-    whitelist = pickle.load(fp)
+#    whitelist = pickle.load(fp)
 
 
 '''
