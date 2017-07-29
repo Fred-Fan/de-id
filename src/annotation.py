@@ -12,7 +12,7 @@ def annotating(note):
     annotation_list = []
     note = sent_tokenize(note)
     allowed_category = ('0', '1', '2', '3', '4', '5', '6', '7')
-    allowed_command = ('exit', 'all', 'skip', 'next', 'pick', 'show',  'done')
+    allowed_command = ('exit', 'all', 'from', 'pick', 'show', 'done')
     allowed_input = allowed_category + allowed_command
     for sent in note:
         sent_list = []
@@ -31,18 +31,18 @@ def annotating(note):
 
         i = 0
         while True:
-            if i == len(word):
-                user_input = input('The end of the sentence. Enter done to next sentence or others to edit. > ')
-                if user_input == 'done':
-                    break
-                else:
-                    i = i - 1
+            #if i == len(word):
+               # user_input = input('The end of the sentence. Enter done to next sentence or others to edit. #> ')
+               # if user_input == 'done':
+               #     break
+               # else:
+               #     i = i - 1
 
 
-            user_input = input('({}){}> '.format(i+1, word[i]))
+            user_input = input('Please input command: ')
 
-            if user_input not in allowed_input:
-                print("Input is not right, please re-input.")
+            if user_input not in allowed_command:
+                print("Command is not right, please re-input.")
 
             else:
                 if user_input == 'exit':
@@ -55,32 +55,28 @@ def annotating(note):
                             sent_list[j][1] = user_input
                         user_input = input('Press Enter to finish the'
                                      ' editing of this sentence, or others'
-                                     ' to go back to the last word. > ')
+                                     ' to go back to the commend type. > ')
                         if user_input == '':
                             break
-                        else:
-                            i = len(word) - 1
                     else:
-                        print('Wrong category. Will go back to the word you were editing.')
+                        print('Wrong category. Will go back to the commend type.')
 
-                elif user_input == 'skip':
-                    user_input = input("which words are you going back to: ")
-                    if user_input.isdigit() and 1 <= int(user_input) <= len(word):
-                        i = int(user_input) - 1
-                    else:
-                        print('Wrong word. Will go back to the word you were editing.')
-
-                elif user_input == 'next':
-                    user_input = input('To which word to edit at the same time: ')
-                    if user_input.isdigit() and i+1 < int(user_input) <= len(word):
-                        category = input('which kind of info are these words? > ')
-                        if category in allowed_category:
-                            for j in range(i, int(user_input)):
-                                sent_list[j][1] = category
+                elif user_input == 'from':
+                    start_word = input('From which word to edit at the same time: ')
+                    if start_word.isdigit() and 0 < int(start_word) <= len(word):
+                        end_word = input('To which word to edit at the same time: ')
+                        if end_word.isdigit() and int(start_word) < int(end_word) <= len(word):
+                            category = input('which kind of info are these words? > ')
+                            if category in allowed_category:
+                                for j in range(int(start_word)-1, int(end_word)):
+                                    sent_list[j][1] = category
                                 #annotation_list.append([word[j], category])
-                            i = int(user_input)
+                            else:
+                                print('Wrong category. Will go back to the commend type.')
                         else:
-                            print('Wrong category. Will go back to the word you were editing.')
+                            print('Wrong word. Will go back to the commend type.')
+                    else:
+                        print('Wrong word. Will go back to the commend type.')
 
                 elif user_input == 'pick':
                     user_input = input('which words are you going to edit, seperated by space: ')
@@ -104,6 +100,7 @@ def annotating(note):
                 elif user_input == 'done':
                     break
 
+                '''
                 else:
                     #temp = re.sub(r'[\/\-\:\~\_]', ' ', word[i])
                     #temp = temp.split(' ')
@@ -111,6 +108,7 @@ def annotating(note):
                     #    annotation_list.append([j, user_input])
                     sent_list[i][1] = user_input
                     i += 1
+                    '''
         '''
         for i in word:
             if i not in punctuation:
@@ -152,9 +150,9 @@ def main():
     with open(finpath, encoding='utf-8', errors='ignore') as fin:
         note = fin.read()
     annotation_list = annotating(note)
-    print(annotation_list)
     file_name = foutpath + "/annotated_" + tail.split('.')[0] + ".ano"
     if annotation_list != []:
+        print(annotation_list)
         with open(file_name, 'wb') as fout:
             pickle.dump(annotation_list, fout)
 
