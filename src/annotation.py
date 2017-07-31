@@ -12,7 +12,7 @@ def annotating(note):
     annotation_list = []
     note = sent_tokenize(note)
     allowed_category = ('0', '1', '2', '3', '4', '5', '6', '7')
-    allowed_command = ('exit', 'all', 'from', 'pick', 'show', 'done')
+    allowed_command = ('exit', 'all', 'from', 'pick', 'show', 'done', 'help')
     allowed_input = allowed_category + allowed_command
     for sent in note:
         sent_list = []
@@ -26,8 +26,8 @@ def annotating(note):
         print('\n')
         # for idx, val in enumerate(word):
            # print("({}){} ".format(idx + 1, val), end='')
-        print('\n0:Non-phi, 1:Name, 2:Address, 3:Postal code,'
-             '4:Phone/FAX, 5:SSN, 6:DOB, 7:others >')
+        print('Category to use: 0:Non-phi, 1:Name, 2:Address, 3:Postal code,'
+             '4:Phone/FAX, 5:SSN, 6:DOB, 7:others\n')
 
         i = 0
         while True:
@@ -39,7 +39,7 @@ def annotating(note):
                #     i = i - 1
 
 
-            user_input = input('Please input command: ')
+            user_input = input('Please input command (enter \'help\' for more info): ')
 
             if user_input not in allowed_command:
                 print("Command is not right, please re-input.")
@@ -100,6 +100,16 @@ def annotating(note):
                 elif user_input == 'done':
                     break
 
+                elif user_input == 'help':
+                    print('(X)WORD[Y]: X is the sequence number of the word, Y is the current type of the word. All words will be set to 0, non-phi, as default.')
+                    print('Command:')
+                    print('all: enter \'all\' to change all words\' type at the same time.')
+                    print('from: enter \'from\' to change successive words\'type at the same time.')
+                    print('pick: enter \'pick\' to change single or multiple(not successive)'
+                        ' words\' type at the same time.')
+                    print('show: enter \'show\' to show the current status of all words')
+                    print('done: enter \'done\' to finish the edit fo this sentence and start the next one.')
+                    print('exit: enter \'exit\' to exit the script without saving. \n')
                 '''
                 else:
                     #temp = re.sub(r'[\/\-\:\~\_]', ' ', word[i])

@@ -276,6 +276,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                 # print(word)
                 word_output = word[0]
                 if word_output not in string.punctuation:
+                    #word_check = word_output
                     word_check = str(pattern_word.sub('', word_output))
                         # remove the speical chars
                     try:
@@ -312,10 +313,11 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
             phi_reduced_note.write(phi_reduced)
 
         # save filtered word
+        screened_words = list(filter(lambda a: a!= '**PHI**', screened_words))
         with open("filter_summary.txt", 'a') as fout:
-            #fout.write(str(f_name)+' '+ str(note_length) + ' ' +
-            #    str(len(screened_words)) + ' ' + ' '.join(screened_words)+'\n')
-            fout.write(' '.join(screened_words))
+            fout.write(str(f_name)+' ' + str(len(screened_words)) +
+                ' ' + ' '.join(screened_words)+'\n')
+            # fout.write(' '.join(screened_words))
 
         print(total_records, f, "--- %s seconds ---" % (time.time() - start_time_single))
 
