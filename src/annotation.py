@@ -54,6 +54,7 @@ def annotating(note):
         sent_list = []
         words = word_tokenize(sent)
         word = [word for word in words if word not in punctuation]
+        print('***********************************************************************')
         print(sent)
         for j in range(len(word)):
             sent_list.append([word[j], '0', j + 1])
@@ -112,9 +113,29 @@ def annotating(note):
                     pick_list = user_input.split(' ')
                     user_input = input('which phi-category do you want to assign to these words? > ')
                     if user_input in allowed_category:
+                        input_category = user_input
                         for j in pick_list:
                             if j.isdigit() and 0 < int(j) <= len(word):
-                                sent_list[int(j) - 1][1] = user_input
+                                # check if the word contain special character and will be splitted later
+                                # if so, check if different categories would be assigned.
+                                if re.findall(r'[\/\-\:\~\_]', sent_list[int(j) - 1][0]) != []:
+                                    user_input = input('{} contains multiple elements. Do they have the same category? press y to assign seperately, others to assign the same.'.format(sent_list[int(j) - 1][0]))
+                                    if user_input == 'y':
+                                        temp = re.sub(r'[\/\-\:\~\_]', ' ', sent_list[int(j) - 1][0])
+                                        temp = temp.split(' ')
+                                        split_category = []
+                                        for k in temp:
+                                            split_input = input('the phi-category of {} is:'.format(k))
+                                            if split_input in allowed_category:
+                                                split_category.append(split_input)
+                                            else:
+                                                print('Input is not correct. Will assign non-phi to {}'.format(k))
+                                                split_category.append('0')
+                                        sent_list[int(j) - 1][1] = split_category
+                                    else:
+                                        sent_list[int(j) - 1][1] = input_category
+                                else:
+                                    sent_list[int(j) - 1][1] = input_category
                                 print('{} is changed.'.format(sent_list[int(j) - 1][0]))
                             else:
                                 print('{} is not a right sequence'.format(j))
@@ -122,11 +143,18 @@ def annotating(note):
                         print('Wrong category. Will go back to the word you were editing.')
 
                 elif user_input == 'show':
-                    print('\n')
+                    print('***********************************************************************')
+                    print(sent)
+                    print('')
                     # display the sentence with the index of each word and the current category assigned to each word
                     # temp[2]: index, temp[0]:word, temp[1]:phi-category
                     [print("({}){}[{}]".format(temp[2], temp[0], temp[1]), end=' ') for temp in sent_list]
-                    print('\n')
+                    print('\n\nCategory to use: 0:Non-phi, 1:Name, 2:Address, 3:DOB,'
+                         '4:Phone, 5:FAX, 6:Email, 7:SSN, 8:MRN, 9:Health Insurance'
+                         ' Beneficiary Numbers, 10:Account Number, 11:Certificate Number,'
+                         ' 12:Vehicle Number, 13:Device Number,'
+                         ' 14:URLs, 15:IP, 16:Biometric Identifiers, 17:Images, 18:Others\n')
+                    #print('\n')
 
                 elif user_input == 'done':
                     break
@@ -154,12 +182,19 @@ def annotating(note):
         # result is a list [word, phi-category]
         for result in sent_list:
             # divide words by special characters, replace special chars with space: ' '
-            temp = re.sub(r'[\/\-\:\~\_]', ' ', result[0])
+            if re.findall(r'[\/\-\:\~\_]', result[0]) != []:
+                temp = re.sub(r'[\/\-\:\~\_]', ' ', result[0])
             # take each new 'sub-word'
-            temp = temp.split(' ')
+                temp = temp.split(' ')
             # sub-word inherits the parent-word's phi-category
-            for j in temp:
-                annotation_list.append([j, result[1]])
+                if len(result[1]) != 1:
+                    for j in range(len(temp)):
+                        annotation_list.append([temp[j], result[1][j]])
+                else:
+                    for j in range(len(temp)):
+                        annotation_list.append([temp[j], result[1]])
+            else:
+                annotation_list.append(result)
         print("\n")
 
     return annotation_list

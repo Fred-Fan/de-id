@@ -27,25 +27,25 @@ from pkg_resources import resource_filename
 """
 Replace PHI words with a safe filtered word: '**PHI**'
 
-Does: 
-1.split document into sentences. 
-2.Run regex patterns to identify addresses which include [streets, rooms, states, etc], 
-emails, phone numbers,age over 90, DOB, SSN, Postal codes, or any word containing 5 or more consecutive digits or 
+Does:
+1.split document into sentences.
+2.Run regex patterns to identify addresses which include [streets, rooms, states, etc],
+emails, phone numbers,age over 90, DOB, SSN, Postal codes, or any word containing 5 or more consecutive digits or
 8 or more characters that begins and ends with digits.
 3. Run spacy and nltk to identify names based on their context. Flag words that are names and add them to name_set
 4. Split sentences into words
 5. Use nltk to check POS. If word is noun, send it on to check it against the whitelist. If word is not noun,
-consider it safe and pass it on to output. 
-6. For nouns passed from step 5, if word is in whitelist, 
-                                    check if word is in name_set, if so -> filter. 
+consider it safe and pass it on to output.
+6. For nouns passed from step 5, if word is in whitelist,
+                                    check if word is in name_set, if so -> filter.
                                         If not in name_set,
-                                            use spacy to check if word is a name based on the single word's meaning and format. 
-                                            Spacy does a per-word look up and assigns most frequent use of that word as a flag 
-                                            (eg'HUNT':-organization, 'Hunt'-name, 'hunt':verb). 
+                                            use spacy to check if word is a name based on the single word's meaning and format.
+                                            Spacy does a per-word look up and assigns most frequent use of that word as a flag
+                                            (eg'HUNT':-organization, 'Hunt'-name, 'hunt':verb).
                                             If the flags is name -> filter
-                                            If flag is not name pass word through as safe  
+                                            If flag is not name pass word through as safe
                                 if word not in whitelist -> filter
-
+7. Check if single Uppercase letter is between PHI infos, if so, consider the letter as a middle initial and filter it. e.g. Ane H Berry.
 
 """
 
@@ -103,6 +103,9 @@ pattern_salutation = re.compile(r"""
 (Dr\.|Mr\.|Mrs\.|Ms\.|Miss|Sir|Madam)\s
 (([A-Z]\'?[A-Z]?[-a-z ]+)*
 )""", re.X)
+
+# match middle initial
+pattern_middle = re.compile(r"""\*\*PHI\*\* ([A-Z]\.?) \*\*PHI\*\*""")
 
 # check if the folder exists
 def is_valid_file(parser, arg):
@@ -325,6 +328,11 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                         phi_reduced = phi_reduced + word_output
                     else:
                         phi_reduced = phi_reduced + ' ' + word_output
+            # check middle initial
+            if pattern_middle.findall(phi_reduced) != []:
+                for item in pattern_middle.findall(phi_reduced):
+                    screened_words.append(item)
+            phi_reduced = pattern_middle.sub('**PHI**', phi_reduced)
 
         if not safe:
             phi_containing_records = 1
