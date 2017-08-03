@@ -9,7 +9,7 @@ import re
 import glob
 
 
-def comparison(note_id, file1path, file2path):
+def comparison(filename, file1path, file2path):
 
     summary_dict = {}
     output = ''
@@ -25,8 +25,8 @@ def comparison(note_id, file1path, file2path):
     note = [word for word in note if word not in punctuation]
 
     temp_annotation = [word[0] for word in annotation if word[1] == '0' and word[0] != '']
-    note_temp = [word for word in note if word != '**PHI**']
-    note_phi = [word for word in note if word == '**PHI**']
+    note_temp = [word for word in note if (word != '**PHI**' and word != '**PHIPostal**')]
+    note_phi = [word for word in note if (word == '**PHI**' or word == '**PHIPostal**')]
 
     script_filtered = len(note_phi)
     summary_dict['false_positive'] = []
@@ -41,7 +41,7 @@ def comparison(note_id, file1path, file2path):
     true_positive = script_filtered-len(summary_dict['false_positive'])+len(summary_dict['false_negative'])
     summary_dict['true_positive'] = true_positive
 
-    output = 'Note: ' + note_id + '\n'
+    output = 'Note: ' + filename + '\n'
     output += "Script filtered: " + str(script_filtered) + '\n'
     output += "True positive: " + str(true_positive) + '\n'
     output += "False Positive: " + ' '.join(summary_dict['false_positive']) + '\n'
@@ -89,42 +89,47 @@ def main():
         if os.path.isfile(file1path):
             head1, tail1 = os.path.split(file1path)
             head2, tail2 = os.path.split(file2path)
-            if re.findall(r'\d+', tail1)[0] != re.findall(r'\d+', tail2)[0]:
-                print('Please make sure the note_ids are the same in both file.')
+            file1name = '.'.join(tail1.split('.')[:-1])
+            file2name = '.'.join(tail2.split('.')[:-1])
+            if file1name != file2name:
+                print('Please make sure the filenames are the same in both file.')
             else:
-                note_id = re.findall(r'\d+', tail1)[0]
-                summary_dict, output = comparison(note_id, file1path, file2path)
-                summary_dict_all[note_id] = summary_dict
+                summary_dict, output = comparison(file1name, file1path, file2path)
+                summary_dict_all[file1name] = summary_dict
                 summary_text += output
                 if_update = True
         else:
-            reply = input('Please make sure no repeated note id in each folders.'
+            reply = input('Please make sure all files are ready.'
                         'Press Enter to process or others to quit.> ')
             if reply == '':
                 if if_recursive:
                     for f in glob.glob(file1path + "/**/*.txt", recursive=True):
                         head, tail = os.path.split(f)
-                        if re.findall(r'\d+', tail) != []:
-                            note_id = re.findall(r'\d+', tail)[0]
-                            phi_reduced_dict[note_id] = f
-                            phi_length += 1
+                        filename = '.'.join(tail.split('.')[:-1])
+                        #if filename != '':
+                            # note_id = re.findall(r'\d+', tail)[0]
+                        phi_reduced_dict[filename] = f
+                        phi_length += 1
                     for f in glob.glob(file2path + "/**/*.ano", recursive=True):
                         head, tail = os.path.split(f)
-                        if re.findall(r'\d+', tail) != []:
-                            note_id = re.findall(r'\d+', tail)[0]
-                            annotation_dict[note_id] = f
+                        filename = '.'.join(tail.split('.')[:-1])
+                        #if re.findall(r'\d+', tail) != []:
+                        #    note_id = re.findall(r'\d+', tail)[0]
+                        annotation_dict[filename] = f
                 else:
                     for f in glob.glob(file1path + "/*.txt"):
                         head, tail = os.path.split(f)
-                        if re.findall(r'\d+', tail) != []:
-                            note_id = re.findall(r'\d+', tail)[0]
-                            phi_reduced_dict[note_id] = f
-                            phi_length += 1
+                        filename = '.'.join(tail.split('.')[:-1])
+                        #if re.findall(r'\d+', tail) != []:
+                           # note_id = re.findall(r'\d+', tail)[0]
+                        phi_reduced_dict[filename] = f
+                        phi_length += 1
                     for f in glob.glob(file2path + "/*.ano"):
                         head, tail = os.path.split(f)
-                        if re.findall(r'\d+', tail) != []:
-                            note_id = re.findall(r'\d+', tail)[0]
-                            annotation_dict[note_id] = f
+                        filename = '.'.join(tail.split('.')[:-1])
+                        #if re.findall(r'\d+', tail) != []:
+                        #    note_id = re.findall(r'\d+', tail)[0]
+                        annotation_dict[filename] = f
 
                 for i in phi_reduced_dict.keys():
                     if i in annotation_dict.keys():
@@ -146,7 +151,7 @@ def main():
 
                 output = "True positive in all notes: " + str(TP_all) + '\n'
                 output += "False Positive in all notes: " + str(FP_all) + '\n'
-                output += "False Nositive in all notes: " + str(FN_all) + '\n'
+                output += "False Negative in all notes: " + str(FN_all) + '\n'
                 output += "Recall: {:.2%}".format(TP_all/(TP_all+FN_all)) + '\n'
                 output += "Precision: {:.2%}".format(TP_all/(TP_all+FP_all)) + '\n'
                 summary_text += output

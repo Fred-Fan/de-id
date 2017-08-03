@@ -22,12 +22,33 @@ from nltk.tree import Tree
 from nltk import pos_tag_sents
 from nltk import ne_chunk
 import spacy
+from pkg_resources import resource_filename
 
-# import self-defined functions
-# from Sql import *
-# from Autocorrection import *
-# autocorrection and whitelist check
-# from Searchterms import *
+"""
+Replace PHI words with a safe filtered word: '**PHI**'
+
+Does: 
+1.split document into sentences. 
+2.Run regex patterns to identify addresses which include [streets, rooms, states, etc], 
+emails, phone numbers,age over 90, DOB, SSN, Postal codes, or any word containing 5 or more consecutive digits or 
+8 or more characters that begins and ends with digits.
+3. Run spacy and nltk to identify names based on their context. Flag words that are names and add them to name_set
+4. Split sentences into words
+5. Use nltk to check POS. If word is noun, send it on to check it against the whitelist. If word is not noun,
+consider it safe and pass it on to output. 
+6. For nouns passed from step 5, if word is in whitelist, 
+                                    check if word is in name_set, if so -> filter. 
+                                        If not in name_set,
+                                            use spacy to check if word is a name based on the single word's meaning and format. 
+                                            Spacy does a per-word look up and assigns most frequent use of that word as a flag 
+                                            (eg'HUNT':-organization, 'Hunt'-name, 'hunt':verb). 
+                                            If the flags is name -> filter
+                                            If flag is not name pass word through as safe  
+                                if word not in whitelist -> filter
+
+
+"""
+
 
 nlp = spacy.load('en')  # load spacy english library
 
@@ -94,9 +115,9 @@ def is_valid_file(parser, arg):
 def namecheck(word_output, name_set, screened_words, safe):
     # check if the word is in the name list
     if word_output.title() in name_set:
-        with open("name.txt", 'a') as fout:
-            fout.write(word_output + '\n')
-        print('Name:', word_output)
+        # with open("name.txt", 'a') as fout:
+           # fout.write(word_output + '\n')
+        # print('Name:', word_output)
         screened_words.append(word_output)
         word_output = "**PHI**"
         safe = False
@@ -108,9 +129,9 @@ def namecheck(word_output, name_set, screened_words, safe):
         doc2 = nlp(word_output.upper())
         if (doc1.ents != () and doc1.ents[0].label_ == 'PERSON' and
                 doc2.ents != () and doc2.ents[0].label_ is not None):
-            with open("name.txt", 'a') as fout:
-                fout.write(word_output + '\n')
-            print('Name:', word_output)
+            # with open("name.txt", 'a') as fout:
+               # fout.write(word_output + '\n')
+            # print('Name:', word_output)
             screened_words.append(word_output)
             name_set.add(word_output.title())
             word_output = "**PHI**"
@@ -124,8 +145,8 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
     with open(f, encoding='utf-8', errors='ignore') as fin:
         # basic settings
         head, tail = os.path.split(f)
-        f_name = re.findall(r'[\w\d]+', tail)[0]  # get the file number
-        print(f_name)
+        #f_name = re.findall(r'[\w\d]+', tail)[0]  # get the file number
+        print(tail)
         start_time_single = time.time()
         total_records = 1
         phi_containing_records = 0
@@ -217,7 +238,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                     if sent[0][position - 1].istitle() or sent[0][position-1].isupper():
                         screened_words.append(sent[0][position - 1])
                         sent[0][position - 1] = '**PHI**'
-                        i = position - 2
+                        i = position - 1
                         # find the closet number, should be the number of street
                         while True:
                             if re.findall(r'^[\d-]+$', sent[0][i]) != []:
@@ -243,6 +264,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                             end_position = position
 
                         for i in range(begin_position, end_position):
+                            #if sent[0][i] != '**PHIPostal**':
                             screened_words.append(sent[0][i])
                             sent[0][i] = '**PHI**'
                             safe = False
@@ -308,14 +330,18 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
             phi_containing_records = 1
 
         # save phi_reduced file
-        fout = foutpath+"whitelisted_"+key_name+"_"+f_name+".txt"
-        with open(fout, "w") as phi_reduced_note:
+        filename = '.'.join(tail.split('.')[:-1])+"_phi_reduced.txt"
+        filepath = os.path.join(foutpath, filename)
+        with open(filepath, "w") as phi_reduced_note:
             phi_reduced_note.write(phi_reduced)
 
         # save filtered word
         screened_words = list(filter(lambda a: a!= '**PHI**', screened_words))
-        with open("filter_summary.txt", 'a') as fout:
-            fout.write(str(f_name)+' ' + str(len(screened_words)) +
+        filepath = os.path.join(foutpath,'filter_summary.txt')
+        #print(filepath)
+        screened_words = list(filter(lambda a: a != '**PHIPostal**', screened_words))
+        with open(filepath, 'a') as fout:
+            fout.write('.'.join(tail.split('.')[:-1])+' ' + str(len(screened_words)) +
                 ' ' + ' '.join(screened_words)+'\n')
             # fout.write(' '.join(screened_words))
 
@@ -335,10 +361,12 @@ def main():
     ap.add_argument("-o", "--output", default="output_test/",
                     help="Path to the directory that save the PHI-reduced note, the default is ./output_test/.",
                     type=lambda x: is_valid_file(ap, x))
-    ap.add_argument("-w", "--whitelist", default="whitelist.pkl",
-                    help="Path to the whitelist, the default is ./whitelist.pkl")
+    ap.add_argument("-w", "--whitelist",
+                    #default=os.path.join(os.path.dirname(__file__), 'whitelist.pkl'),
+                    default=resource_filename(__name__, 'whitelist.pkl'),
+                    help="Path to the whitelist, the default is phireducer/whitelist.pkl")
     ap.add_argument("-n", "--name", default="phi_reduced",
-                    help="The key word of the output file name, the default is whitelisted_phi_reduced_*.txt.")
+                    help="The key word of the output file name, the default is *_phi_reduced.txt.")
     ap.add_argument("-p", "--process", default=1, type=int,
                     help="The number of multiple process, the default is 1.")
     args = ap.parse_args()
@@ -357,17 +385,22 @@ def main():
     else:
         print('input file:', finpath)
         head, tail = os.path.split(finpath)
-        f_name = re.findall(r'[\w\d]+', tail)[0]
+        # f_name = re.findall(r'[\w\d]+', tail)[0]
     print('output folder:', foutpath)
     print('Using whitelist:', whitelist_file)
-    with open(whitelist_file, "rb") as fin:
-        whitelist = pickle.load(fin)
-    print('length of whitelist: {}'.format(len(whitelist)))
-    if if_dir:
-        print('phi_reduced file\'s name would be:', foutpath+"/whitelisted_"+key_name+"_*.txt")
-    else:
-        print('phi_reduced file\'s name would be:', foutpath+"/whitelisted_"+key_name+"_"+f_name+".txt")
-    print('run in {} process(es)'.format(process_number))
+    try:
+        with open(whitelist_file, "rb") as fin:
+            whitelist = pickle.load(fin)
+        print('length of whitelist: {}'.format(len(whitelist)))
+        if if_dir:
+            print('phi_reduced file\'s name would be:', "*_"+key_name+".txt")
+        else:
+            print('phi_reduced file\'s name would be:', '.'.join(tail.split('.')[:-1])+"_"+key_name+".txt")
+        print('run in {} process(es)'.format(process_number))
+    except FileNotFoundError:
+        print("No whitelist is found. The script will stop.")
+        whitelist = set()
+
 
     # start multiprocess
     pool = Pool(processes=process_number)
@@ -375,29 +408,30 @@ def main():
     results_list = []
     filter_time = time.time()
 
-    if os.path.isdir(finpath):
-        if args.recursive:
-            results = [pool.apply_async(filter_task, (f,)+(whitelist, foutpath, key_name)) for f in glob.glob(finpath+"/**/*.txt", recursive=True)]
+    if len(whitelist) != 0:
+        if os.path.isdir(finpath):
+            if args.recursive:
+                results = [pool.apply_async(filter_task, (f,)+(whitelist, foutpath, key_name)) for f in glob.glob   (finpath+"/**/*.txt", recursive=True)]
+            else:
+                results = [pool.apply_async(filter_task, (f,)+(whitelist, foutpath, key_name)) for f in glob.glob   (finpath+"/*.txt")]
         else:
-            results = [pool.apply_async(filter_task, (f,)+(whitelist, foutpath, key_name)) for f in glob.glob(finpath+"/*.txt")]
-    else:
-        results = [pool.apply_async(filter_task, (f,)+(whitelist, foutpath, key_name)) for f in glob.glob(finpath)]
-    try:
-        results_list = [r.get() for r in results]
-        total_records, phi_containing_records = zip(*results_list)
-        total_records = sum(total_records)
-        phi_containing_records = sum(phi_containing_records)
+            results = [pool.apply_async(filter_task, (f,)+(whitelist, foutpath, key_name)) for f in glob.glob(  finpath)]
+        try:
+            results_list = [r.get() for r in results]
+            total_records, phi_containing_records = zip(*results_list)
+            total_records = sum(total_records)
+            phi_containing_records = sum(phi_containing_records)
 
-        print("total records:", total_records, "--- %s seconds ---" % (time.time() - start_time_all))
-        print('filter_time', "--- %s seconds ---" % (time.time() - filter_time))
-        print('total records processed: {}'.format(total_records))
-        print('num records with phi: {}'.format(phi_containing_records))
-    except ValueError:
-        print("No txt file in the input folder.")
-        pass
+            print("total records:", total_records, "--- %s seconds ---" % (time.time() - start_time_all))
+            print('filter_time', "--- %s seconds ---" % (time.time() - filter_time))
+            print('total records processed: {}'.format(total_records))
+            print('num records with phi: {}'.format(phi_containing_records))
+        except ValueError:
+            print("No txt file in the input folder.")
+            pass
 
-    pool.close()
-    pool.join()
+        pool.close()
+        pool.join()
     # close multiprocess
 
 

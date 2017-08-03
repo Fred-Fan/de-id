@@ -20,8 +20,6 @@ from searchterms import *
 import requests
 import json
 import argparse
-import time
-
 
 stemmer = PorterStemmer()
 
@@ -30,25 +28,23 @@ stemmer = PorterStemmer()
 searchterms1 = search_terms("81602583-1f6f-400a-a49f-618975025bec")
 searchterms2 = search_terms("81602583-1f6f-400a-a49f-618975025bec")
 
-st = StanfordNERTagger('/media/DataHD/r_phi_corpus/src_temp/english.all.3class.distsim.crf.ser.gz','/media/DataHD/r_phi_corpus/src_temp/stanford-ner.jar')
-#st = StanfordNERTagger('F:\\Google Drive\\\Jupyter\\ICHS\\english.all.3class.distsim.crf.ser.gz','F:\\Google Drive\\\Jupyter\\ICHS\\stanford-ner.jar')
-
+st = StanfordNERTagger('F:\\Google Drive\\\Jupyter\\ICHS\\english.all.3class.distsim.crf.ser.gz','F:\\Google Drive\\\Jupyter\\ICHS\\stanford-ner.jar')
+autoc = autocorrect()
 stemmer = PorterStemmer()
 
-finpath = "/media/DataHD/baby_notes/"
-#finpath = "/media/DataHD/r_phi_corpus/src_temp/input_temp/"
-foutpath = "/media/DataHD/r_phi_corpus/src_temp/output_temp/"
-#finpath = "input_test\\"
-#foutpath = "output_test\\"
+
+#finpath = "/media/DataHD/beau/baby_notes/"
+#finpath = "/media/DataHD/corpus/notes/"
+#foutpath ="/media/DataHD/r_phi_corpus/"
+finpath = "input_test\\"
+foutpaht = "output\\"
 
 #with open("whitelist.txt",'rb') as fin:
 #    whitelist = fin.read()
 #whitelist = set(whitelist)
 
 with open("whitelist.pkl", "rb") as fp:
-#with open("/media/DataHD/r_phi_corpus/src_temp/whitelist.pkl", "rb") as fp:
-    #whitelist = pickle.load(fp, encoding="bytes")
-    whitelist = pickle.load(fp)
+    whitelist = pickle.load(fp, encoding="bytes")
 print('length of whitelist: {}'.format(len(whitelist)))
 
 ### initialize variables
@@ -76,16 +72,13 @@ pattern_time = re.compile(r"""\b(
 (\d{4}|\d{2})[-/:]\d{2}([-/:](\d{4}|\d{2}))+    # time-format
 )""",re.X|re.I)   
 '''
-start_time_all = time.time()
 
 for f in glob.glob(finpath+"*.txt"):
-    with open(f, encoding='utf-8', errors='ignore') as fin:
+    with open(f) as fin:
         #print f
-        f_name = f.split("/")[-1]
-        #f_name = f.split("\\")[-1]
-        f_name = re.findall(r'\d+', f_name)[0]
-        print(f_name)
-        start_time_single = time.time()
+        #f_name = f.split("\\")[5]
+        f_name = f
+        #print f_name
         total_records += 1
         safe = True
         screens_per_file[f_name] = 0
@@ -94,18 +87,12 @@ for f in glob.glob(finpath+"*.txt"):
         out_name = 'whiteListed_'+ f_name
         phi_reduced = ''
         searchterms2.search("")
-        note = fin.read()
         #sent_end_prev = ' '
-        '''
-        try:
-            note = fin.read()
-            # remove note id,e.g. "A30000091        2006-10-15 22:28:00.000 6789784"     
-            note_id = re.search(r'\s\d+\s', note).group(0)
-            phi_note_id = note [:note.index(note_id)+len(note_id)]
-            note = note.replace(phi_note_id, 'FILTERED ')
-        except:
-            continue
-        '''
+        note = fin.read()
+        # remove note id,e.g. "A30000091        2006-10-15 22:28:00.000 6789784"     
+        note_id = re.search(r'\s\d+\s', note).group(0)
+        phi_note_id = note [:note.index(note_id)+len(note_id)]
+        note = note.replace(phi_note_id, 'FILTERED ')
         # remove "-"
         note = sent_tokenize(note.replace('-', ' ').replace('/',' '))
         word_sent = [word_tokenize(sent) for sent in note]
@@ -114,7 +101,6 @@ for f in glob.glob(finpath+"*.txt"):
             sent_tag = nltk.pos_tag_sents([sent])
             for word in sent_tag[0]:
                 word_output = word[0]
-                check_flag = 0
                 if word[0] not in string.punctuation:
                     word_position = sent.index(word[0])
                     
@@ -127,77 +113,65 @@ for f in glob.glob(finpath+"*.txt"):
                     # nouns or Proper noun | plurals and the first letter is upperclass |
                     # the first letter is upperclass and not in the begining of the sentence
                     # numbers and in the same sentence that contains sensetive words, e.g. address, street, road
-                        word_lower = word_output.lower()
                         if ((word[1] == 'NN' or word[1] == 'NNP') or
                         ((word[1] == 'NNS' or word[1] == 'NNPS') and word_output.istitle())):
                     #or ((word[1] == 'CD' or (word[1] == 'JJ') and pattern_time.findall(word)))
-
+                            
+                                                    
+                       
+                            # autocorrection
                             #print("1")
                             word_ori = word_output
-                            autoc = autocorrect(word_output, whitelist)
-                            word_modif, check_flag = autoc.autocheck()
-                            
+                            word_output, correct_flag = autoc.autocorrection(word_ori)
+        
+                            if correct_flag:
+                                corrected_words.append(word.ori)
+                                corrects_per_file[f_name] += 1
+                                safe = False
                         
-                         #   elif word_output.lower().encode("utf8") not in whitelist and stemmer.stem(word_output.lower()).encode('utf8') not in whitelist:
-                                #print("2")
-                                #print(st.tag([word_output])[0])
-                                #name
-                            if check_flag != 1:
-                                if ((st.tag([word_ori])[0][1] != 'PERSON' and st.tag([word_ori])[0][1] != 'LOCATION') or 
-                                ((st.tag([word_ori])[0][1] == 'PERSON' or st.tag([word_ori])[0][1] != 'LOCATION') and not word_ori.istitle())):
+                            elif word_output.lower().encode("utf8") not in whitelist and stemmer.stem(word_output.lower()).encode('utf8') not in whitelist:
+                                # print("2")
+                                # print(st.tag([word_output])[0])
+                                # name
+                                if ((st.tag([word_output])[0][1] != 'PERSON' and st.tag([word_output])[0][1] != 'LOCATION') or 
+                                ((st.tag([word_output])[0][1] == 'PERSON' or st.tag([word_output])[0][1] != 'LOCATION') and not word_output.istitle())):
                                     #print(word_output)
-                                    searchterms1.search(word_ori)
+                                    searchterms1.search(word_output.lower())
                                  #   print("5")
                                     if not searchterms1.ifumls():
                                     #      print(word_output)
-                                        searchterms2.search(stemmer.stem(word_ori))
+                                        searchterms2.search(stemmer.stem(word_output.lower()))
                                    #     print("6")
                                         # searchterms2.printresult()
                                         if not searchterms2.ifumls():
-                                            if  check_flag == 3:
-                                                word_output = word_modif + '***F***'
-                                                corrected_words.append(word_ori)
-                                                corrects_per_file[f_name] += 1
-                                                safe = False
-                                            else:
-                                                screened_words.append(word_lower)
-                                                word_output  = "**FILTERED**"
-                                                safe = False
-                                                screens_per_file[f_name] += 1 
-                                        else:
-                                            whitelist.add(word_lower)
-                                            print(word_ori, 'length of whitelist: {}'.format(len(whitelist)))
-
-     
-                                    else:
-                                        whitelist.add(word_lower)
-                                        print(word_ori, 'length of whitelist: {}'.format(len(whitelist)))
-
-
-                                    
-                                    
+                                            screened_words.append(word_output.lower())
+                                            word_output  = "**FILTERED**"
+                                            safe = False
+                                            screens_per_file[f_name] += 1
                                 else: 
-                                    # filter names,locations
+                               # if ((st.tag([word_output.lower()])[0][1] == 'PERSON') or (word[0].istitle() and word_position != 0) or
+                                # (st.tag([word_output.lower()])[0][1] != 'PERSON' and (not (searchterms1.ifumls() or searchterms2.ifumls())))):
                                     #print(word_output, st.tag([word_output])[0][1])
                                     #print("7")
-                                    screened_words.append(word_lower)
+                                    screened_words.append(word_output.lower())
                                     word_output  = "**FILTERED**"
                                     safe = False
                                     screens_per_file[f_name] += 1
                                     
- 
+                                    
                         elif ((word[1] == 'CD' and pattern_sens.findall(tmp)) or (word[1] == 'CD' and len(word_output) > 7)):
                             #print("4")
                              #print(word_output)
-                            screened_words.append(word_lower)
+                            screened_words.append(word_output.lower())
                             word_output  = "**FILTERED**"
                             safe = False
                             screens_per_file[f_name] += 1
 
+                                    
                            # print(word_output)  
                     except:
                         print(word[0])
-                        #word_output = "+"+word_output + "+"
+                        word_output = "+"+word_output + "+"
                         #print(sent.index(word))
                         #print(nltk.pos_tag(word))
                         pass
@@ -205,19 +179,13 @@ for f in glob.glob(finpath+"*.txt"):
                 phi_reduced = phi_reduced + ' ' + word_output
         if safe == False:
             phi_containing_records += 1
-        fout = foutpath+"whitelisted_nlp_"+f_name+".txt"
+        fout = "output\\phi_reduced_note_pos_token"+str(total_records)+".txt"
         
         with open(fout,"w") as phi_reduced_note:
             phi_reduced_note.write(phi_reduced)
-        
-        print(total_records, "--- %s seconds ---" % (time.time() - start_time_single))
 
-print(total_records, "--- %s seconds ---" % (time.time() - start_time_all))
 print('total records processed: {}'.format(total_records))
 print('num records with phi: {}'.format(phi_containing_records))
-print('length of whitelist: {}'.format(len(whitelist)))
-with open("whitelist.pkl", "wb") as fout:
-    pickle.dump(whitelist,fout )
 
 screened_dict = Counter(screened_words)
 screened_sorted_by_value = OrderedDict(sorted(screened_dict.items(), key=lambda x: x[1], reverse = True))
@@ -244,6 +212,6 @@ screens_per_file = OrderedDict(sorted(screens_per_file.items(), key = lambda x: 
 # for item in screened_words_out:
 #   print>>thefile, item
 
-#pickle.dump(screened_dict, open( "output\\words_screened_dict.pkl", "wb" ) )
-#pickle.dump(screens_per_file, open( "output\\words_perFile_dict.pkl", "wb" ) )
-#pickle.dump(corrects_per_file, open( "output\\corrects_per_file.pkl", "wb" ) )
+pickle.dump(screened_dict, open( "output\\words_screened_dict.pkl", "wb" ) )
+pickle.dump(screens_per_file, open( "output\\words_perFile_dict.pkl", "wb" ) )
+pickle.dump(corrects_per_file, open( "output\\corrects_per_file.pkl", "wb" ) )
