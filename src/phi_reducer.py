@@ -105,7 +105,7 @@ pattern_salutation = re.compile(r"""
 )""", re.X)
 
 # match middle initial
-pattern_middle = re.compile(r"""\*\*PHI\*\* ([A-Z]\.?) \*\*PHI\*\*""")
+pattern_middle = re.compile(r"""\*\*PHI\*\* ([A-Z]r? ?\.?) \*\*PHI\*\*""")
 
 # check if the folder exists
 def is_valid_file(parser, arg):
@@ -324,7 +324,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
 
                     phi_reduced = phi_reduced + ' ' + word_output
                 else:
-                    if i > 0 and sent_tag[0][i-1][0][-1] in string.punctuation:
+                    if i > 0 and sent_tag[0][i-1][0][-1] in string.punctuation and sent_tag[0][i-1][0][-1] != '*':
                         phi_reduced = phi_reduced + word_output
                     else:
                         phi_reduced = phi_reduced + ' ' + word_output

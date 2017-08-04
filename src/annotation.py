@@ -56,9 +56,9 @@ def annotating(note):
         word = [word for word in words if word not in punctuation]
         print('***********************************************************************')
         print(sent)
+        print('')
         for j in range(len(word)):
             sent_list.append([word[j], '0', j + 1])
-        print('\n')
         # display the sentence with the index of each word and the current category assigned to each word
         # temp[2]: index, temp[0]:word, temp[1]:phi-category
         [print("({}){}[{}]".format(temp[2], temp[0], temp[1]), end=' ') for temp in sent_list]
@@ -120,10 +120,11 @@ def annotating(note):
                                 # if so, check if different categories would be assigned.
                                 if re.findall(r'[\/\-\:\~\_]', sent_list[int(j) - 1][0]) != []:
                                     user_input = input('{} contains multiple elements. Do they have the same category? press y to assign seperately, others to assign the same.'.format(sent_list[int(j) - 1][0]))
+                                    split_category = []
                                     if user_input == 'y':
                                         temp = re.sub(r'[\/\-\:\~\_]', ' ', sent_list[int(j) - 1][0])
                                         temp = temp.split(' ')
-                                        split_category = []
+                                        temp = list(filter(None, temp))
                                         for k in temp:
                                             split_input = input('the phi-category of {} is:'.format(k))
                                             if split_input in allowed_category:
@@ -133,6 +134,7 @@ def annotating(note):
                                                 split_category.append('0')
                                         sent_list[int(j) - 1][1] = split_category
                                     else:
+                                        #split_category.append(input_category)
                                         sent_list[int(j) - 1][1] = input_category
                                 else:
                                     sent_list[int(j) - 1][1] = input_category
@@ -186,15 +188,16 @@ def annotating(note):
                 temp = re.sub(r'[\/\-\:\~\_]', ' ', result[0])
             # take each new 'sub-word'
                 temp = temp.split(' ')
+                temp = list(filter(None, temp))
             # sub-word inherits the parent-word's phi-category
-                if len(result[1]) != 1:
+                if type(result[1]) == list:
                     for j in range(len(temp)):
                         annotation_list.append([temp[j], result[1][j]])
                 else:
                     for j in range(len(temp)):
                         annotation_list.append([temp[j], result[1]])
             else:
-                annotation_list.append(result)
+                annotation_list.append([result[0], result[1]])
         print("\n")
 
     return annotation_list

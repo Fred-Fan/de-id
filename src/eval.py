@@ -31,11 +31,12 @@ def comparison(filename, file1path, file2path):
     script_filtered = len(note_phi)
     summary_dict['false_positive'] = []
     summary_dict['false_negative'] = []
-
+    #print(note_phi)
+    #print(temp_annotation)
     for i, s in enumerate(ndiff(note_temp, temp_annotation)):
-        if s[0] == '+':
+        if s[0] == '+' and re.findall(r'\w+', s[2:]) != []:
             summary_dict['false_positive'].append(s[2:])
-        elif s[0] == '-':
+        elif s[0] == '-' and re.findall(r'\w+', s[2:]) != []:
             summary_dict['false_negative'].append(s[2:])
 
     true_positive = script_filtered-len(summary_dict['false_positive'])+len(summary_dict['false_negative'])
@@ -51,7 +52,7 @@ def comparison(filename, file1path, file2path):
     output += "Recall: {:.2%}".format(true_positive/(true_positive+len(summary_dict['false_negative']))) + '\n'
     output += "Precision: {:.2%}".format(true_positive/(true_positive+len(summary_dict['false_positive']))) + '\n'
     output += '\n'
-    #print(output)
+    #print(summary_dict)
     return summary_dict, output
 
 
