@@ -63,7 +63,7 @@ def annotating(note):
         # temp[2]: index, temp[0]:word, temp[1]:phi-category
         [print("({}){}[{}]".format(temp[2], temp[0], temp[1]), end=' ') for temp in sent_list]
         print('\n')
-        print('Category to use: 0:Non-phi, 1:Name, 2:Address, 3:DOB,'
+        print('Category to use: 0:Non-phi, 1:Name, 2:Address, 3:Date, '
              '4:Phone, 5:FAX, 6:Email, 7:SSN, 8:MRN, 9:Health Insurance'
              ' Beneficiary Numbers, 10:Account Number, 11:Certificate Number,'
              ' 12:Vehicle Number, 13:Device Number,'
@@ -119,7 +119,7 @@ def annotating(note):
                                 # check if the word contain special character and will be splitted later
                                 # if so, check if different categories would be assigned.
                                 if re.findall(r'[\/\-\:\~\_]', sent_list[int(j) - 1][0]) != []:
-                                    user_input = input('{} contains multiple elements. Do they have the same category? press y to assign seperately, others to assign the same.'.format(sent_list[int(j) - 1][0]))
+                                    user_input = input('{} contains multiple elements. Do you want to annotate them seperately? press y to assign seperately, others to assign the same.'.format(sent_list[int(j) - 1][0]))
                                     split_category = []
                                     if user_input == 'y':
                                         temp = re.sub(r'[\/\-\:\~\_]', ' ', sent_list[int(j) - 1][0])
@@ -151,7 +151,7 @@ def annotating(note):
                     # display the sentence with the index of each word and the current category assigned to each word
                     # temp[2]: index, temp[0]:word, temp[1]:phi-category
                     [print("({}){}[{}]".format(temp[2], temp[0], temp[1]), end=' ') for temp in sent_list]
-                    print('\n\nCategory to use: 0:Non-phi, 1:Name, 2:Address, 3:DOB,'
+                    print('\n\nCategory to use: 0:Non-phi, 1:Name, 2:Address, 3:date, '
                          '4:Phone, 5:FAX, 6:Email, 7:SSN, 8:MRN, 9:Health Insurance'
                          ' Beneficiary Numbers, 10:Account Number, 11:Certificate Number,'
                          ' 12:Vehicle Number, 13:Device Number,'
@@ -176,7 +176,7 @@ def annotating(note):
                          ' and then assign the same phi-category to all words in that'
                          ' list.Enter the index of each word, using spaces to separate'
                          ' each word index, hit RETURN when you have listed all desired word indices.')
-                    print('show: enter \'show\' to show the current current phi-category of all words')
+                    print('show: enter \'show\' to show the current phi-category of all words')
                     print('done: enter \'done\' to finish annotating the current'
                         ' sentence and start the next one.')
                     print('exit: enter \'exit\' to exit the script without saving. \n')
