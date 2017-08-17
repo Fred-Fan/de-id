@@ -58,10 +58,18 @@ def comparison(filename, file1path, file2path):
 
     # Begin Step 1
     annot_list = [word[0] for word in annotation_note if word[1] == '0' and word[0] != '']
+    for i in range(len(annot_list)):
+        if annot_list[i][-1] in punctuation:
+            annot_list[i] = annot_list[i][:-1]
+    #print(annot_list)
     # Begin Step 2
-    phi_r_list = [word for word in phi_reduced_list if '**PHI**' not in word]
+    phi_r_list = [word for word in phi_reduced_list if '**PHI' not in word]
+    for i in range(len(phi_r_list)):
+        if phi_r_list[i][-1] in punctuation:
+            phi_r_list[i] = phi_r_list[i][:-1]
+    #print(phi_r_list)
     # Begin Step 3
-    filtered_count = [word for word in phi_reduced_list if '**PHI**' in word]
+    filtered_count = [word[0] for word in annotation_note if word[1] != '0' and word[0] != '']
 
     filtered_count = len(filtered_count)
     summary_dict['false_positive'] = []
@@ -79,7 +87,7 @@ def comparison(filename, file1path, file2path):
         elif marker_and_word[0] == '-' and re.findall(r'\w+', marker_and_word[2:]) != []:
             summary_dict['false_negative'].append(marker_and_word[2:])
 
-    true_positive = filtered_count-len(summary_dict['false_positive'])+len(summary_dict['false_negative'])
+    true_positive = filtered_count-len(summary_dict['false_negative'])
     summary_dict['true_positive'] = true_positive
 
     output = 'Note: ' + filename + '\n'
@@ -190,7 +198,7 @@ def main():
                         FP_all += len(v['false_positive'])
                         FN_all += len(v['false_negative'])
 
-                    output = "{} notes have been evaulated.\n".format(processed_count-len(miss_file))
+                    output = "{} notes have been evaluated.\n".format(processed_count-len(miss_file))
                     output += "True Positive in all notes: " + str(TP_all) + '\n'
                     output += "False Positive in all notes: " + str(FP_all) + '\n'
                     output += "False Negative in all notes: " + str(FN_all) + '\n'

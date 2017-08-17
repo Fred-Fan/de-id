@@ -2,7 +2,7 @@ import pandas as pd
 import pickle
 import re
 
-debug_word = 'Tylenol'
+debug_word = 'bailey'
 
 umls_df = pd.read_csv('whitelist\\umls_LEXICON.csv', delimiter = ',', encoding = 'latin1')
 #print umls_df.head()
@@ -247,9 +247,12 @@ words_from_notes_list = ['todays',  'saver', 'crtp', 'sch', 'aud', 'plavix', 'st
 #################################
 manually_added = ['', '-', '(',')']
 
+with open('name_set.pkl', 'rb') as fin:
+    name_set = pickle.load(fin)
 # mesh_heir_ms_list seems to contain some phi, not including it for now. mesh_heir_list
 whitelist = set(mesh_list + abbrev_list + common_english_list + umls_list  + mesh_heir_term_list +  descriptor_mesh_list + words_from_notes_list + manually_added)
 whitelist = set([item for item in whitelist if not item.isdigit()]) # final check to remove all digit-words
+savelist = whitelist - (whitelist&name_set)
 
 print('mesh top nodes list: {}'.format(len(set(mesh_list))))
 print('mesh mid nodes list: {}'.format(len(set(mesh_heir_term_list))))
@@ -262,6 +265,7 @@ print('allowable special chars: {}'.format(len(set(words_from_notes_list))))
 
 
 print('len of final whitelist: {}'.format(len(whitelist)))
+print('len of final safelist: {}'.format(len(safelist)))
 print(debug_word)
 print('final white')
 print(debug_word.lower() in whitelist)
