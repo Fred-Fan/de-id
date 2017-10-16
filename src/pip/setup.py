@@ -1,17 +1,17 @@
 from setuptools import setup
 
 setup(
-    name='phi-reducer',    # This is the name of your PyPI-package.
-    version='0.4.3',  # Update the version number for new releases
-    packages=['phireducer'],
+    name='philter',    # This is the name of your PyPI-package.
+    version='0.1.2',  # Update the version number for new releases
+    packages=['philter'],
     #include_package_data=True,
-    package_data={'phireducer': ['whitelist.pkl'],
+    package_data={'philter': ['whitelist.pkl'],
     },
     entry_points={
         'console_scripts': [
-            'phi-reducer = phireducer.phi_reducer:main',
-            'phi-annotation = phireducer.annotation:main',
-            'phi-eval = phireducer.eval:main']
+            'philter = philter.phi_reducer:main',
+            'philter-annotation = philter.annotation:main',
+            'philter-eval = philter.eval:main']
             },
         # The name of your scipt, and also the command you'll be using for calling it
     zip_safe = False,
