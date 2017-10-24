@@ -7,6 +7,7 @@ import os
 import re
 import glob
 import random
+from difflib import ndiff
 
 """
 Annotate each word in a text file as either being PHI (if so, annotate the type of PHI)
@@ -24,7 +25,7 @@ software on your own files, or for the creation of a training corpus for machine
 methods.
 
 """
-def annotating(note):
+def annotating(note, phifile):
 
     """
     Does:Labels each word as a category of PHI (not-phi is an option). Takes document splits into sentences. Takes sentences splits in
@@ -46,22 +47,65 @@ def annotating(note):
 
     """
     annotation_list = []
-    note = sent_tokenize(note)
-    allowed_category = ('0', '1', '2', '3', '4', '5', '6')
+    philter_phi = []
+    question_mark = []
+    note = re.sub(r'[\/\-\:\~\_]', ' ', note)
+    notelist = word_tokenize(note)
+    notelist = [word for word in notelist if word != '']
+    for i in range(len(notelist)):
+        if len(notelist[i]) > 1 and notelist[i][-1] in punctuation:
+            notelist[i] = notelist[i][:-1]
+    phifile = word_tokenize(phifile)
+    phifile = [word for word in phifile if '**PHI' not in word and word != '']
+    for i in range(len(phifile)):
+        if len(phifile[i]) > 1 and phifile[i][-1] in punctuation:
+            phifile[i] = phifile[i][:-1]
+    #print(notelist)
+    #print(phifile)
+    note = ''
+    for word_index, marker_and_word in enumerate(ndiff(notelist, phifile)):
+        #print(word_index, marker_and_word)
+        #if marker_and_word[0] == '+' and re.findall(r'\w+', marker_and_word[2:]) != []:
+            #question_mark.append(marker_and_word[2:])
+        if marker_and_word[0] == '-' and re.findall(r'\w+', marker_and_word[2:]) != []:
+            philter_phi.append(marker_and_word[2:])
+            note += '**PHI-' + marker_and_word[2:] + '** '
+        elif marker_and_word[0] == '+':
+            note = note
+        else:
+            note += marker_and_word[2:] + ' '
+
+    #print(philter_phi)
+    #print(question_mark)
+    allowed_category = ('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
     allowed_command = ('exit', 'all', 'range', 'select', 'show', 'done', 'help')
-    category_print = 'Category to use: 0:Non-phi, 1:Contact, 2:Date, 3:ID, 4:Location, 5:Name, 6:Age\n'
+    category_print = 'Category to use: 0:Philter safe, 1:Philter phi, 2:False Positive, 3: Name, 4: Location, 5: Date, 6: Contact, 7. ID, 8. Age(>90), 9. Others\n'
+
+    note = sent_tokenize(note)
+
     for sent in note:
         # sent_list: list of words that have not yet been divided by special characters
+        #print(sent)
         sent_list = []
+        print(sent)
         words = word_tokenize(sent)
         word = [word for word in words if word not in punctuation]
         print('***********************************************************************')
-        print(sent)
-        print('')
+        #print(sent)
+        #print('')
         for j in range(len(word)):
-            sent_list.append([word[j], '0', j + 1])
+            if '**PHI' in word[j]:
+                try:
+                    phi_word = re.findall(r'\*\*PHI\-(.*)\*\*', word[j])[0]
+                    sent_list.append([phi_word, '1', j + 1])
+                except IndexError:
+                    phi_word = re.findall(r'\*\*PHI\-(.*)', word[j])[0]
+                    sent_list.append([phi_word, '1', j + 1])
+            else:
+                sent_list.append([word[j], '0', j + 1])
         # display the sentence with the index of each word and the current category assigned to each word
         # temp[2]: index, temp[0]:word, temp[1]:phi-category
+        print(sent)
         [print("({}){}[{}]".format(temp[2], temp[0], temp[1]), end=' ') for temp in sent_list]
         print('\n')
         print(category_print)
@@ -144,16 +188,26 @@ def annotating(note):
                 elif user_input == 'show':
                     safe_list = []
                     phi_list = []
+                    fp_list = []
+                    temp_sent = ''
                     for temp in sent_list:
-                        if temp[1] != '0':
-                            phi_list.append(temp[0])
-                        else:
+                        if temp[1] == '0':
                             safe_list.append(temp[0])
+                            temp_sent += temp[0]+' '
+                        elif temp[1] == '2':
+                            fp_list.append(temp[0])
+                            temp_sent += temp[0]+' '
+                        else:
+                            phi_list.append(temp[0])
+                            temp_sent += '**PHI-'+temp[0]+'** '
                     print('***********************************************************************')
-                    print(sent)
-                    print('')
+                    print(temp_sent)
+                    [print("({}){}[{}]".format(temp[2], temp[0], temp[1]), end=' ') for temp in sent_list]
+                    print('\n')
+                    print(category_print)
                     print('phi:', (" ").join(phi_list))
                     print('safe:', (" ").join(safe_list))
+                    print('false positive:', (" ").join(fp_list))
                     # display the sentence with the index of each word and the current category assigned to each word
                     # temp[2]: index, temp[0]:word, temp[1]:phi-category
                     #[print("({}){}[{}]".format(temp[2], temp[0], temp[1]), end=' ') for temp in sent_list]
@@ -234,6 +288,8 @@ Each sublist contains 2 elements: [word_from_original_text, phi_label]
     ap = argparse.ArgumentParser()
     ap.add_argument("-i", "--input", required=True,
                     help="Path to the file or the folder you would like to annotate.")
+    ap.add_argument("-p", "--phi", required=True,
+                    help="Path to the folder contains the philtered file.")
     ap.add_argument("-o", "--output", required=True,
                     help="Path to the directory where the annotated note will be saved.")
     ap.add_argument("-n", "--name", default="phi_reduced",
@@ -245,6 +301,7 @@ Each sublist contains 2 elements: [word_from_original_text, phi_label]
     #print(args.random)
     key_word = args.name
     finpath = args.input
+    phipath = args.phi
     anno_mode = args.random
     foutpath = args.output
 
@@ -262,10 +319,21 @@ Each sublist contains 2 elements: [word_from_original_text, phi_label]
             else:
                 print("Quitting")
                 os._exit(0)
+        if not os.path.isdir(phipath):
+            print('the phi folder did not exist. Quitting')
+            os._exit(0)
+        else:
+            phi_filename = '.'.join(tail.split('.')[:-1]) + "_phi_reduced.txt"
+            phi_file = os.path.join(phipath, phi_filename)
+            if not os.path.isfile(phi_file):
+                print("philter file does not exist.")
+                os._exit(0)
         with open(finpath, encoding='utf-8', errors='ignore') as fin:
             note = fin.read()
+        with open(phi_file, encoding='utf-8', errors='ignore') as fin:
+            phifile = fin.read()
         doing_name = '.'.join(tail.split('.')[:-1]) + ".txt.doing"
-        doing_path = os.path.join(head, done_name)
+        doing_path = os.path.join(head, doing_name)
         doing_check = 'y'
         done_name = '.'.join(tail.split('.')[:-1]) + ".txt.done"
         done_path = os.path.join(head, done_name)
@@ -277,7 +345,7 @@ Each sublist contains 2 elements: [word_from_original_text, phi_label]
         if done_check == 'y' and doing_check == 'y':
             with open(doing_path, 'w') as fout: # create doing file to show this file is being annoated
                 fout.write('')
-            annotation_list = annotating(note)
+            annotation_list = annotating(note, phifile)
             try:  # rmove doing file
                 os.remove(doing_path)
             except OSError:
@@ -304,32 +372,50 @@ Each sublist contains 2 elements: [word_from_original_text, phi_label]
             else:
                 print("Quitting")
                 os._exit(0)
-        annotation_set = set(glob.glob(os.path.join(finpath, '*.txt')))
+        if not os.path.isdir(phipath):
+            print('the phi folder did not exist. Quitting')
+            os._exit(0)
+        annotation_set = set()
+        for f in glob.glob(os.path.join(finpath, '*.txt')):
+            head,tail = os.path.split(''.join(f.split('.txt')[:-1]))
+            annotation_set.add(tail)
         done_set = set()
         for f in glob.glob(os.path.join(finpath, '*.txt.done')):
-            done_set.add(''.join(f.split('.done')[:-1]))
+            head,tail = os.path.split(''.join(f.split('.txt.done')[:-1]))
+            done_set.add(tail)
         doing_set = set()
         for f in glob.glob(os.path.join(finpath, '*.txt.doing')):
-            doing_set.add(''.join(f.split('.doing')[:-1]))
-        if len(annotation_set-done_set-doing_set) > 0:
-            to_do = ''.join(random.sample(annotation_set-done_set-doing_set, 1))
+            head,tail = os.path.split(''.join(f.split('.txt.doing')[:-1]))
+            doing_set.add(tail)
+        phi_set = set()
+        for f in glob.glob(os.path.join(phipath, '*_phi_reduced.txt')):
+            head,tail = os.path.split(''.join(f.split('_phi_reduced.txt')[:-1]))
+            phi_set.add(tail)
+        to_do_set = (annotation_set-done_set-doing_set) & phi_set
+        print(to_do_set)
+        if len(to_do_set) > 0:
+            to_do = ''.join(random.sample(to_do_set, 1))
+            todo_path = os.path.join(finpath, to_do + '.txt')
         else:
             print('All files in that folder are annotated or being annotataged.')
             os._exit(0)
         print("You will annotate:", to_do)
-        with open(to_do, encoding='utf-8', errors='ignore') as fin:
+        with open(todo_path, encoding='utf-8', errors='ignore') as fin:
             note = fin.read()
-        doing_path = to_do + '.doing'
-        done_path = to_do + '.done'
+        doing_path = os.path.join(finpath, to_do + '.txt.doing')
+        done_path =  os.path.join(finpath, to_do + '.txt.done')
+        phi_path = os.path.join(phipath, to_do + '_phi_reduced.txt')
+        with open(phi_path, encoding='utf-8', errors='ignore') as fin:
+            phifile = fin.read()
         with open(doing_path, 'w') as fout: # create doing file to show this file is being annoated
             fout.write('')
-        annotation_list = annotating(note)
+        annotation_list = annotating(note, phifile)
         # remove doing file
         try:
             os.remove(doing_path)
         except OSError:
             pass
-        head, tail = os.path.split(to_do)
+        head, tail = os.path.split(todo_path)
         file_name = '.'.join(tail.split('.')[:-1]) + "_"+ key_word + ".ano"
         file_path = os.path.join(foutpath, file_name)
         if annotation_list != []:

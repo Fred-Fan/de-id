@@ -1,5 +1,5 @@
 [console_scripts]
-philter = philter.phi_reducer:main
-philter-annotation = philter.annotation:main
-philter-eval = philter.eval:main
+philter = philter.philter:main
+philter-annotation = philter.philter_annotator:main
+philter-eval = philter.philter_eval:main
 
