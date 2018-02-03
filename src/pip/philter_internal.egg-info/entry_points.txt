@@ -1,0 +1,5 @@
+[console_scripts]
+philter = philter_internal.philter:main
+philter-annotation = philter_internal.philter_annotator:main
+philter-eval = philter_internal.philter_eval:main
+

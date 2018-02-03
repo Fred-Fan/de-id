@@ -221,6 +221,19 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
         phi_containing_records = 0
         safe = True
         screened_words = []
+        postal_list = []
+        devid_list = []
+        number_list = []
+        date_list = []
+        fourdigits_list = []
+        email_list = []
+        url_list = []
+        age_list = []
+        address_list = []
+        whitelist_list = []
+        name_list = []
+        month_list = []
+        middle_list = []
         name_set = set()
         phi_reduced = ''
         '''
@@ -261,6 +274,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                 safe = False
                 for item in pattern_postal.findall(sent):
                     screened_words.append(item[0])
+                    postal_list.append(item[0])
             sent = str(pattern_postal.sub('**PHIPostal**', sent))
 
             if pattern_devid.findall(sent) != []:
@@ -269,6 +283,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                     if (re.search(r'\d', item) is not None and
                         re.search(r'[A-Z]',item) is not None):
                         screened_words.append(item)
+                        devid_list.append(item)
                         sent = sent.replace(item, '**PHI**')
 
             # number check
@@ -279,6 +294,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                     #if pattern_date.match(item[0]) is None:
                     sent = sent.replace(item[0], '**PHI**')
                     screened_words.append(item[0])
+                    number_list.append(item[0])
                     #print(item[0])
             #sent = str(pattern_number.sub('**PHI**', sent))
             '''
@@ -296,7 +312,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                             #print(item[0])
                             sent = sent.replace(item[0], '**PHIDate**')
             '''
-            data_list = []
+
             if pattern_date.findall(sent) != []:
                 safe = False
                 for item in pattern_date.findall(sent):
@@ -304,16 +320,17 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                         if (len(set(re.findall(r'[^\w\-]',item[0]))) <= 1):
                             #screened_words.append(item[0])
                             #print(item[0])
-                            data_list.append(item[0])
+                            date_list.append(item[0])
                             #sent = sent.replace(item[0], '**PHIDate**')
                     else:
                         if len(set(re.findall(r'[^\w]',item[0]))) == 1:
                             #screened_words.append(item[0])
                             #print(item[0])
-                            data_list.append(item[0])
+                            date_list.append(item[0])
                             #sent = sent.replace(item[0], '**PHIDate**')
-            data_list.sort(key=len, reverse=True) 
-            for item in data_list:
+            date_list.sort(key=len, reverse=True) 
+            for item in date_list:
+                screened_words.append(item)
                 sent = sent.replace(item, '**PHIDate**')
 
             #sent = str(pattern_date.sub('**PHI**', sent))
@@ -322,12 +339,14 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                 safe = False
                 for item in pattern_4digits.findall(sent):
                     screened_words.append(item)
+                    fourdigits_list.append(item)
             sent = str(pattern_4digits.sub('**PHI**', sent))
             # email check
             if pattern_email.findall(sent) != []:
                 safe = False
                 for item in pattern_email.findall(sent):
                     screened_words.append(item)
+                    email_list.append(item)
             sent = str(pattern_email.sub('**PHI**', sent))
             # url check
             if pattern_url.findall(sent) != []:
@@ -340,6 +359,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                         len(item[0])>10):
                         print(item[0])
                         screened_words.append(item[0])
+                        url_list.append(item[0])
                         sent = sent.replace(item[0], '**PHI**')
                         #print(item[0])
             #sent = str(pattern_url.sub('**PHI**', sent))
@@ -384,6 +404,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                     age_string = str(word_previous) + str(word_after)
                     if pattern_age.findall(age_string) != []:
                         screened_words.append(sent[0][position])
+                        age_list.append(sent[0][position])
                         sent[0][position] = '**PHI**'
                         safe = False
 
@@ -395,6 +416,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
 
                     if sent[0][position - 1].istitle() or sent[0][position-1].isupper():
                         screened_words.append(sent[0][position - 1])
+                        address_list.append(sent[0][position - 1])
                         sent[0][position - 1] = '**PHI**'
                         i = position - 1
                         # find the closet number, should be the number of street
@@ -424,6 +446,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                         for i in range(begin_position, end_position):
                             #if sent[0][i] != '**PHIPostal**':
                             screened_words.append(sent[0][i])
+                            address_list.append(sent[0][i])
                             sent[0][i] = '**PHI**'
                             safe = False
 
@@ -499,6 +522,7 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                             ((word[1] == 'NNS' or word[1] == 'NNPS') and word_check.istitle()))):
                             if word_check.lower() not in whitelist_dict:
                                 screened_words.append(word_output)
+                                whitelist_list.append(word_output)
                                 word_output = "**PHI**"
                                 safe = False
                             else:
@@ -506,7 +530,10 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                                 if ((word_output.istitle() or word_output.isupper()) and
                                     pattern_name.findall(word_output) != [] and
                                     re.search(r'\b([A-Z])\b', word_check) is None):
+                                    old_screened_words = screened_words
                                     word_output, name_set, screened_words, safe = namecheck(word_output, name_set, screened_words, safe)
+                                    if len(screened_words) != len(old_screened_words):
+                                        name_list.append(screened_words[-1])
 
                         # check day/year according to the month name
                         elif word[1] == 'CD':
@@ -522,12 +549,16 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                             for j in (context_before + context_after):
                                 if pattern_mname.search(j[0]) is not None:
                                     screened_words.append(word_output)
+                                    month_list.append(word_output)
                                     #print(word_output)
                                     word_output = "**PHI**"
                                     safe = False
                                     break
                         else:
+                            old_screened_words = screened_words
                             word_output, name_set, screened_words, safe = namecheck(word_output, name_set, screened_words, safe)
+                            if len(screened_words) != len(old_screened_words):
+                                name_list.append(screened_words[-1])
 
 
                     except:
@@ -553,12 +584,14 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
             if pattern_mname.findall(phi_reduced) != []:
                 for item in pattern_mname.findall(phi_reduced):
                     screened_words.append(item[0])
+                    month_list.append(item[0])
             phi_reduced = pattern_mname.sub('**PHI**', phi_reduced)
 
             if pattern_middle.findall(phi_reduced) != []:
                 for item in pattern_middle.findall(phi_reduced):
                 #    print(item[0])
                     screened_words.append(item[0])
+                    middle_list.append(item[0])
             phi_reduced = pattern_middle.sub('**PHI** **PHI** ', phi_reduced)
         # print(phi_reduced)
 
@@ -570,6 +603,27 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
         filepath = os.path.join(foutpath, filename)
         with open(filepath, "w") as phi_reduced_note:
             phi_reduced_note.write(phi_reduced)
+
+        output_bypattern = 'File:' + '.'.join(tail.split('.')[:-1]) + '\n'
+        output_bypattern += "Postal: " + ' '.join(postal_list) + '\n'
+        output_bypattern += "Devid: " + ' '.join(devid_list) + '\n'
+        output_bypattern += "Number: " + ' '.join(number_list) + '\n'
+        output_bypattern += "Date: " + ' '.join(date_list) + '\n'
+        output_bypattern += "4digits: " + ' '.join(fourdigits_list) + '\n'
+        output_bypattern += "Email: " + ' '.join(email_list) + '\n'
+        output_bypattern += "Url: " + ' '.join(url_list) + '\n'
+        output_bypattern += "Age: " + ' '.join(age_list) + '\n'
+        output_bypattern += "Address: " + ' '.join(address_list) + '\n'
+        output_bypattern += "Whitelist: " + ' '.join(whitelist_list) + '\n'
+        output_bypattern += "Name: " + ' '.join(name_list) + '\n'
+        output_bypattern += "Month: " + ' '.join(month_list) + '\n'
+        output_bypattern += "Middlename: " + ' '.join(middle_list) + '\n'
+
+        filename = '.'.join(tail.split('.')[:-1])+"_" + key_name + ".pattern"
+        filepath = os.path.join(foutpath, filename)
+        with open(filepath, "w") as fout:
+            fout.write(output_bypattern)
+
 
         # save filtered words
         #screened_words = list(filter(lambda a: a!= '**PHI**', screened_words))

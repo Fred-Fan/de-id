@@ -1,0 +1,14 @@
+setup.py
+philter_internal/__init__.py
+philter_internal/philter.py
+philter_internal/philter_annotator.py
+philter_internal/philter_eval.py
+philter_internal/randompick.py
+philter_internal/whitelist.pkl
+philter_internal.egg-info/PKG-INFO
+philter_internal.egg-info/SOURCES.txt
+philter_internal.egg-info/dependency_links.txt
+philter_internal.egg-info/entry_points.txt
+philter_internal.egg-info/not-zip-safe
+philter_internal.egg-info/requires.txt
+philter_internal.egg-info/top_level.txt

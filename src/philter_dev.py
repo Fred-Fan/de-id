@@ -200,7 +200,7 @@ def namecheck(word_output, name_set, screened_words, safe):
     return word_output, name_set, screened_words, safe
 
 
-def filter_task(f, whitelist_dict, foutpath, key_name):
+def filter_task(f, whitelist_dict, blacklist, foutpath, key_name):
 
     # pretrain = HunposTagger('hunpos.model', 'hunpos-1.0-linux/hunpos-tag')
     pretrain = SennaTagger('senna')
@@ -494,16 +494,19 @@ def filter_task(f, whitelist_dict, foutpath, key_name):
                         # remove the speical chars
                     try:
                         # word[1] is the pos tag of the word
-
-                        if (((word[1] == 'NN' or word[1] == 'NNP') or
-                            ((word[1] == 'NNS' or word[1] == 'NNPS') and word_check.istitle()))):
+                        # check if just characters are in the word_output. if so, go to whitelist
+                        if re.findall(r'^[A-Za-z]+$', word_check) is not None:
                             if word_check.lower() not in whitelist_dict:
                                 screened_words.append(word_output)
                                 word_output = "**PHI**"
                                 safe = False
                             else:
                                 # For words that are in whitelist, check to make sure that we have not identified them as names
-                                if ((word_output.istitle() or word_output.isupper()) and
+                                if word_output.lower() in blacklist:
+                                    screened_words.append(word_output)
+                                    word_output = "**PHI**"
+                                    safe = False
+                                elif ((word_output.istitle() or word_output.isupper()) and
                                     pattern_name.findall(word_output) != [] and
                                     re.search(r'\b([A-Z])\b', word_check) is None):
                                     word_output, name_set, screened_words, safe = namecheck(word_output, name_set, screened_words, safe)
@@ -608,12 +611,18 @@ def main():
                     help="The key word of the output file name, the default is *_phi_reduced.txt.")
     ap.add_argument("-p", "--process", default=1, type=int,
                     help="The number of processes to run simultaneously, the default is 1.")
+    ap.add_argument("-b", "--blacklist",
+                    #default=os.path.join(os.path.dirname(__file__), 'whitelist.pkl'),
+                    default=resource_filename(__name__, 'blacklist.pkl'),
+                    #default = 'blacklist.pkl',
+                    help="Path to the blacklist")
     args = ap.parse_args()
 
     finpath = args.input
     foutpath = args.output
     key_name = args.name
     whitelist_file = args.whitelist
+    blacklist_file = args.blacklist
     process_number = args.process
     if_dir = os.path.isdir(finpath)
 
@@ -627,18 +636,33 @@ def main():
         # f_name = re.findall(r'[\w\d]+', tail)[0]
     print('output folder:', foutpath)
     print('Using whitelist:', whitelist_file)
+    print('Using blacklist:', blacklist_file)
+
     try:
-        with open(whitelist_file, "rb") as fin:
-            whitelist = pickle.load(fin)
+        try:
+            with open(whitelist_file, "rb") as fin:
+                whitelist = pickle.load(fin)
+        except UnicodeDecodeError:
+            with open(whitelist_file, "rb") as fin:
+                whitelist = pickle.load(fin, encoding = 'latin1')
         print('length of whitelist: {}'.format(len(whitelist)))
-        if if_dir:
-            print('phi_reduced file\'s name would be:', "*_"+key_name+".txt")
-        else:
-            print('phi_reduced file\'s name would be:', '.'.join(tail.split('.')[:-1])+"_"+key_name+".txt")
-        print('run in {} process(es)'.format(process_number))
     except FileNotFoundError:
         print("No whitelist is found. The script will stop.")
         os._exit(0)
+
+    try:
+        with open(blacklist_file, "rb") as fin:
+            blacklist = pickle.load(fin)
+        print('length of blacklist: {}'.format(len(blacklist)))
+    except FileNotFoundError:
+        print("No blacklist is found.")
+        blacklist = set()
+
+    if if_dir:
+        print('phi_reduced file\'s name would be:', "*_"+key_name+".txt")
+    else:
+        print('phi_reduced file\'s name would be:', '.'.join(tail.split('.')[:-1])+"_"+key_name+".txt")
+    print('run in {} process(es)'.format(process_number))
 
     filepath = os.path.join(foutpath,'filter_summary.txt')
     with open(filepath, 'w') as fout:
@@ -652,11 +676,13 @@ def main():
     # apply_async() allows a worker to begin a new task before other works have completed their current task
     if os.path.isdir(finpath):
         if args.recursive:
-            results = [pool.apply_async(filter_task, (f,)+(whitelist, foutpath, key_name)) for f in glob.glob   (finpath+"/**/*.txt", recursive=True)]
+            results = [pool.apply_async(filter_task, (f,)+(whitelist, blacklist, foutpath, key_name)) 
+                      for f in glob.glob(finpath+"/**/*.txt", recursive=True)]
         else:
-            results = [pool.apply_async(filter_task, (f,)+(whitelist, foutpath, key_name)) for f in glob.glob   (finpath+"/*.txt")]
+            results = [pool.apply_async(filter_task, (f,)+(whitelist, blacklist, foutpath, key_name)) 
+                      for f in glob.glob(finpath+"/*.txt")]
     else:
-        results = [pool.apply_async(filter_task, (f,)+(whitelist, foutpath, key_name)) for f in glob.glob(  finpath)]
+        results = [pool.apply_async(filter_task, (f,)+(whitelist, blacklist, foutpath, key_name)) for f in glob.glob(finpath)]
     try:
         results_list = [r.get() for r in results]
         total_records, phi_containing_records = zip(*results_list)

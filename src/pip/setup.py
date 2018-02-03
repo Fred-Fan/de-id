@@ -1,17 +1,17 @@
 from setuptools import setup
 
 setup(
-    name='philter',    # This is the name of your PyPI-package.
-    version='0.1.5',  # Update the version number for new releases
-    packages=['philter'],
+    name='philter_internal',    # This is the name of your PyPI-package.
+    version='0.1.2',  # Update the version number for new releases
+    packages=['philter_internal'],
     #include_package_data=True,
-    package_data={'philter': ['whitelist.pkl'],
+    package_data={'philter_internal': ['whitelist.pkl'],
     },
     entry_points={
         'console_scripts': [
-            'philter = philter.philter:main',
-            'philter-annotation = philter.philter_annotator:main',
-            'philter-eval = philter.philter_eval:main']
+            'philter = philter_internal.philter:main',
+            'philter-annotation = philter_internal.philter_annotator:main',
+            'philter-eval = philter_internal.philter_eval:main']
             },
         # The name of your scipt, and also the command you'll be using for calling it
     zip_safe = False,
